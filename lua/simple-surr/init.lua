@@ -25,12 +25,18 @@ function M.setup(opts)
 
 	vim.keymap.set("v", keymaps.surround_selection, function()
 		local style = vim.fn.input("Enter surround style (e.g., [, {, (, }, ', \", `, custom): ")
-		require("simple-surr.surround").surround_selection(style)
+		-- Checking if style is empty
+		if style ~= nil and style ~= "" then
+			require("simple-surr.surround").surround_selection(style)
+		end
 	end, { desc = "Surround selection with custom or predefined style" })
 
 	vim.keymap.set("n", keymaps.surround_word, function()
 		local style = vim.fn.input("Enter surround style (e.g., [, {, (, }, ', \", `, custom): ")
-		require("simple-surr.surround").surround_word(style)
+		-- Checking if style is empty
+		if style ~= nil and style ~= "" then
+			require("simple-surr.surround").surround_word(style)
+		end
 	end, { desc = "Surround word under cursor with custom or predefined style" })
 
 	vim.keymap.set("n", "<leader>sr", function()
