@@ -250,7 +250,34 @@ function M.surround_line(style, line_number, space)
         return
     end
 
-    M.surround_range(style, { 0, line, 1, 0 }, { 0, line, #line_text, 0 }, space)
+    local trimmed = line_text:match("^%s*(.-)%s*$")
+    local leading_spaces = #line_text - #line_text:gsub("^%s*", "")
+    local trailing_spaces = #line_text - #line_text:gsub("%s*$", "")
+
+    local content_start_col = leading_spaces + 1
+    local content_end_col = #line_text - trailing_spaces
+
+    if content_start_col > content_end_col then
+        return
+    end
+
+    local opening, closing = parse_surround_style(style)
+    if not opening or not closing then
+        return
+    end
+
+    local add_spaces = resolve_space(space)
+    local inner_prefix = add_spaces and " " or ""
+    local inner_suffix = add_spaces and " " or ""
+
+    local front = line_text:sub(1, leading_spaces)
+    local content = line_text:sub(content_start_col, content_end_col)
+    local after = line_text:sub(#line_text - trailing_spaces + 1)
+
+    local new_line = front .. opening .. inner_prefix .. content .. inner_suffix .. closing .. after
+    vim.fn.setline(line, new_line)
+    vim.fn.setpos(".", { 0, line, leading_spaces + #opening + 1, 0 })
+    M.set_last_action("surround_line", { style, line, add_spaces })
 end
 
 function M.remove_or_change_surround_word(change, space)
@@ -402,6 +429,270 @@ function M.toggle_or_change_surround_selection(style)
     end
 
     vim.fn.setpos(".", start_pos)
+end
+
+function M.surround_multi(style, separator, space)
+    local opening, closing = parse_surround_style(style)
+    if not opening or not closing then
+        return
+    end
+
+    local sep = separator or ","
+    if #sep ~= 1 then
+        print("Separator must be a single character.")
+        return
+    end
+
+    local add_spaces = resolve_space(space)
+    local has_inner_space = add_spaces
+
+    local start_pos, end_pos = normalize_pos(vim.fn.getpos("v"), vim.fn.getpos("."))
+    local start_line = start_pos[2]
+    local end_line = end_pos[2]
+    local start_col = start_pos[3]
+    local end_col = end_pos[3]
+
+    if start_line ~= end_line then
+        print("Multi-surround only works on a single line.")
+        return
+    end
+
+    local line = vim.fn.getline(start_line)
+    local selected = line:sub(start_col, end_col)
+
+    local result = {}
+    local pos = 1
+    local sep_pattern = "[^" .. sep .. "]+"
+
+    while pos <= #selected do
+        local element_start, element_end = selected:find(sep_pattern, pos)
+        if not element_start then
+            break
+        end
+
+        local element = selected:sub(element_start, element_end)
+
+        local has_leading_space = element:sub(1, 1) == " "
+        local has_trailing_space = element:sub(-1, -1) == " "
+
+        local trimmed = element:match("^%s*(.-)%s*$")
+
+        local inner_prefix = ""
+        local inner_suffix = ""
+
+        if has_inner_space then
+            if has_leading_space then
+                inner_prefix = " "
+            end
+            if has_trailing_space then
+                inner_suffix = " "
+            end
+        end
+
+        local wrapped = opening .. inner_prefix .. trimmed .. inner_suffix .. closing
+        table.insert(result, wrapped)
+
+        pos = element_end + 1
+
+        if pos <= #selected then
+            local after_element = selected:sub(pos, pos)
+            if after_element == sep then
+                table.insert(result, sep)
+                pos = pos + 1
+            end
+        end
+    end
+
+    local front = line:sub(1, start_col - 1)
+    local after = line:sub(end_col + 1)
+
+    local joined = table.concat(result, "")
+    local new_line = front .. joined .. after
+    vim.fn.setline(start_line, new_line)
+    vim.fn.setpos(".", start_pos)
+    M.set_last_action("surround_multi", { style, sep, has_inner_space })
+end
+
+function M.surround_prefix_suffix(prefix, suffix)
+    local start_pos, end_pos = normalize_pos(vim.fn.getpos("v"), vim.fn.getpos("."))
+    local start_line = start_pos[2]
+    local end_line = end_pos[2]
+
+    if start_line == end_line then
+        local line = vim.fn.getline(start_line)
+        local front = line:sub(1, start_pos[3] - 1)
+        local selected = line:sub(start_pos[3], end_pos[3])
+        local after = line:sub(end_pos[3] + 1)
+        local new_line = front .. prefix .. selected .. suffix .. after
+        vim.fn.setline(start_line, new_line)
+    else
+        local lines = {}
+        for i = start_line, end_line do
+            table.insert(lines, vim.fn.getline(i))
+        end
+
+        local first_line = lines[1]
+        local last_line = lines[#lines]
+        local first_front = first_line:sub(1, start_pos[3] - 1)
+        local first_selected = first_line:sub(start_pos[3])
+        local last_selected = last_line:sub(1, end_pos[3])
+        local last_after = last_line:sub(end_pos[3] + 1)
+
+        vim.fn.setline(start_line, first_front .. prefix .. first_selected)
+        for i = start_line + 1, end_line - 1 do
+            local middle_line = lines[i - start_line + 1]
+            vim.fn.setline(i, middle_line)
+        end
+        vim.fn.setline(end_line, last_selected .. suffix .. last_after)
+    end
+
+    vim.fn.setpos(".", start_pos)
+    M.set_last_action("surround_prefix_suffix", { prefix, suffix })
+end
+
+function M.unwrap(style)
+    local word = vim.fn.expand("<cword>")
+    if word == "" then
+        return
+    end
+
+    local current_line = vim.fn.getline(".")
+    local col_start = vim.fn.col(".")
+
+    if style and style ~= "" then
+        local opening, closing = parse_surround_style(style)
+        if not opening or not closing then
+            return
+        end
+
+        local pattern = vim.pesc(opening) .. "%s*" .. vim.pesc(word) .. "%s*" .. vim.pesc(closing)
+        local updated_line = current_line:gsub(pattern, word, 1)
+
+        if current_line ~= updated_line then
+            vim.api.nvim_set_current_line(updated_line)
+            vim.fn.cursor(0, col_start)
+            M.set_last_action("unwrap", { style })
+        else
+            print("No matching surround found!")
+        end
+    else
+        local found = false
+        local updated_line = current_line:gsub(
+            "([%(%)%{%}%[%]%\"'`><,|])%s*" .. vim.pesc(word) .. "%s*([%(%)%{%}%[%]%\"'`><,|])",
+            function(o, c)
+                found = true
+                return word
+            end,
+            1
+        )
+
+        if found then
+            vim.api.nvim_set_current_line(updated_line)
+            vim.fn.cursor(0, col_start)
+            M.set_last_action("unwrap", { nil })
+        else
+            print("No surround characters found!")
+        end
+    end
+end
+
+function M.unwrap_selection(style)
+    local start_pos, end_pos = normalize_pos(vim.fn.getpos("v"), vim.fn.getpos("."))
+    local start_line = start_pos[2]
+    local end_line = end_pos[2]
+
+    if start_line ~= end_line then
+        print("Unwrap selection only works on a single line.")
+        return
+    end
+
+    local line = vim.fn.getline(start_line)
+    local selected = line:sub(start_pos[3], end_pos[3])
+
+    if selected == "" then
+        return
+    end
+
+    local opening_char = selected:sub(1, 1)
+    local closing_char = selected:sub(-1, -1)
+
+    if style and style ~= "" then
+        local opening, closing = parse_surround_style(style)
+        if not opening or not closing then
+            return
+        end
+
+        if opening_char == opening and closing_char == closing then
+            local unwrapped = selected:sub(2, -2)
+            local front = line:sub(1, start_pos[3] - 1)
+            local after = line:sub(end_pos[3] + 1)
+            vim.fn.setline(start_line, front .. unwrapped .. after)
+            M.set_last_action("unwrap_selection", { style })
+        else
+            print("Selection does not match the specified surround style!")
+        end
+    else
+        local found = false
+        for key, pair in pairs(M.surround_pairs) do
+            if pair[1] == opening_char and pair[2] == closing_char then
+                local unwrapped = selected:sub(2, -2)
+                local front = line:sub(1, start_pos[3] - 1)
+                local after = line:sub(end_pos[3] + 1)
+                vim.fn.setline(start_line, front .. unwrapped .. after)
+                M.set_last_action("unwrap_selection", { nil })
+                found = true
+                break
+            end
+        end
+
+        if not found and opening_char == closing_char then
+            local unwrapped = selected:sub(2, -2)
+            local front = line:sub(1, start_pos[3] - 1)
+            local after = line:sub(end_pos[3] + 1)
+            vim.fn.setline(start_line, front .. unwrapped .. after)
+            M.set_last_action("unwrap_selection", { nil })
+        elseif not found then
+            print("Selection is not surrounded by a known pair!")
+        end
+    end
+
+    vim.fn.setpos(".", start_pos)
+end
+
+function M.surround_block(style)
+    local visual_mode = vim.api.nvim_get_mode().mode
+    if visual_mode ~= string.char(22) and visual_mode ~= "\22" then
+        print("surround_block only works in visual block mode (Ctrl-v)")
+        return
+    end
+
+    local opening, closing = parse_surround_style(style)
+    if not opening or not closing then
+        return
+    end
+
+    local start_pos = vim.fn.getpos("'<")
+    local end_pos = vim.fn.getpos("'>")
+    local start_line = start_pos[2]
+    local end_line = end_pos[2]
+    local start_col = math.min(start_pos[3], end_pos[3])
+    local end_col = math.max(start_pos[3], end_pos[3])
+
+    for line_num = start_line, end_line do
+        local line = vim.fn.getline(line_num)
+        local line_len = #line
+
+        if line_len >= end_col then
+            local front = line:sub(1, start_col - 1)
+            local selected = line:sub(start_col, end_col)
+            local after = line:sub(end_col + 1)
+            local new_line = front .. opening .. selected .. closing .. after
+            vim.fn.setline(line_num, new_line)
+        end
+    end
+
+    vim.fn.setpos(".", start_pos)
+    M.set_last_action("surround_block", { style })
 end
 
 return M
