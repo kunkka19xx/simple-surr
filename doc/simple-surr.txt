@@ -142,9 +142,24 @@ gsb or g:surround_block
         Surround a visual block selection (column mode with Ctrl-v).
 
         1. Enter visual block mode with Ctrl-v
-        2. Select columns
+        2. Select columns using any motion (h, l, w, e, b, $, 0, f, t, j, k, etc.)
         3. Press gsb
         4. Enter surround style
+
+        Supported motions: h, l, w, e, b, $, 0, f{char}, t{char}, F{char},
+        T{char}, j, k, gg, G, etc.
+
+        Examples:
+        Ctrl-v $     - Select to end of each line
+        Ctrl-v w     - Select word forward
+        Ctrl-v e     - Select to end of word
+        Ctrl-v h     - Select left
+        Ctrl-v l     - Select right
+        Ctrl-v 0     - Select from column 1
+        Ctrl-v fj    - Select until j
+        Ctrl-v tj    - Select till j
+
+        Note: Lines shorter than the selection start are skipped.
 
 ==============================================================================
 REPEAT SUPPORT                                      *simple-surr-repeat*

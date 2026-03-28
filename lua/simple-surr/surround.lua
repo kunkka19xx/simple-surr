@@ -682,10 +682,18 @@ function M.surround_block(style)
         local line = vim.fn.getline(line_num)
         local line_len = #line
 
-        if line_len >= end_col then
-            local front = line:sub(1, start_col - 1)
-            local selected = line:sub(start_col, end_col)
-            local after = line:sub(end_col + 1)
+        if line_len < start_col then
+        else
+            local effective_start_col = start_col
+            local effective_end_col = end_col
+
+            if end_col > line_len then
+                effective_end_col = line_len
+            end
+
+            local front = line:sub(1, effective_start_col - 1)
+            local selected = line:sub(effective_start_col, effective_end_col)
+            local after = line:sub(effective_end_col + 1)
             local new_line = front .. opening .. selected .. closing .. after
             vim.fn.setline(line_num, new_line)
         end
