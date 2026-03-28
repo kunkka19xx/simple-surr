@@ -1,33 +1,72 @@
 local M = {}
+local surround = require("simple-surr.surround")
 
 local default_keymaps = {
 	surround_selection = "<leader>s",
 	surround_word = "<leader>sw",
 	remove_or_change_surround_word = "<leader>sr",
 	toggle_or_change_surround_selection = "<leader>ts",
+	surround_motion = "gs",
+	surround_line = "gss",
+	surround_treesitter = "gst",
+	surround_function = "gsf",
 }
+
+local operator_state = {
+	style = nil,
+}
+
+local function set_repeat()
+	if vim.fn.exists("*repeat#set") == 1 then
+		vim.fn["repeat#set"]("\\<Plug>(simple-surr-repeat)")
+	end
+end
+
+function M.operatorfunc(type)
+	if not operator_state.style then
+		return
+	end
+
+	surround.operator_surround(operator_state.style, type)
+	operator_state.style = nil
+	set_repeat()
+end
 
 function M.setup(opts)
 	opts = opts or {}
 	local keymaps = vim.tbl_extend("force", default_keymaps, opts.keymaps or {})
+	local surround_opts = {}
+	if opts.space then
+		surround_opts.space = opts.space
+	end
+	if opts.treesitter_nodes then
+		surround_opts.treesitter_nodes = opts.treesitter_nodes
+	end
+	if opts.treesitter_function_nodes then
+		surround_opts.treesitter_function_nodes = opts.treesitter_function_nodes
+	end
+	surround.set_options(surround_opts)
 
-	-- you can append your custom pairs :)
-	if opts.custom_surround_pairs then
-		for opening, closing in pairs(opts.custom_surround_pairs) do
-			require("simple-surr.surround").add_surround_pair(opening, closing)
-		end
+	if opts.overwrite_default_pairs then
+		surround.surround_pairs = {}
 	end
 
-	-- you can overwrite default pairs
-	if opts.overwrite_default_pairs then
-		M.surround_pairs = opts.custom_surround_pairs or {}
+	if opts.custom_surround_pairs then
+		for opening, closing in pairs(opts.custom_surround_pairs) do
+			if type(closing) == "table" then
+				surround.add_surround_pair(closing[1], closing[2])
+			elseif type(closing) == "string" then
+				surround.add_surround_pair(opening, closing)
+			end
+		end
 	end
 
 	vim.keymap.set("v", keymaps.surround_selection, function()
 		local style = vim.fn.input("Enter surround style (e.g., [, {, (, }, ', \", `, custom): ")
 		-- Checking if style is empty
 		if style ~= nil and style ~= "" then
-			require("simple-surr.surround").surround_selection(style)
+			surround.surround_selection(style)
+			set_repeat()
 		end
 	end, { desc = "Surround selection with custom or predefined style" })
 
@@ -35,24 +74,65 @@ function M.setup(opts)
 		local style = vim.fn.input("Enter surround style (e.g., [, {, (, }, ', \", `, custom): ")
 		-- Checking if style is empty
 		if style ~= nil and style ~= "" then
-			require("simple-surr.surround").surround_word(style)
+			surround.surround_word(style)
+			set_repeat()
 		end
 	end, { desc = "Surround word under cursor with custom or predefined style" })
 
-	vim.keymap.set("n", "<leader>sr", function()
+	vim.keymap.set("n", keymaps.remove_or_change_surround_word, function()
 		local change = vim.fn.input("Change surround style (leave empty to remove): ")
 		if change == "" then
-			require("simple-surr.surround").remove_or_change_surround_word()
+			surround.remove_or_change_surround_word()
 		else
-			require("simple-surr.surround").remove_or_change_surround_word(change)
+			surround.remove_or_change_surround_word(change)
 		end
+		set_repeat()
 	end, { desc = "Remove or change surround style of word" })
 
-	vim.keymap.set("v", "<leader>ts", function()
+	vim.keymap.set("v", keymaps.toggle_or_change_surround_selection, function()
 		local style =
 			vim.fn.input("Enter surround style (e.g., [, {, (, }, ', \", `, custom, or leave blank to remove): ")
-		require("simple-surr.surround").toggle_or_change_surround_selection(style)
+		surround.toggle_or_change_surround_selection(style)
+		set_repeat()
 	end, { desc = "Toggle or change surround selection with custom or predefined style" })
+
+	vim.keymap.set("n", keymaps.surround_motion, function()
+		local style = vim.fn.input("Enter surround style (e.g., [, {, (, }, ', \", `, custom): ")
+		if not style or style == "" then
+			return ""
+		end
+		operator_state.style = style
+		vim.go.operatorfunc = "v:lua.require'simple-surr'.operatorfunc"
+		return "g@"
+	end, { expr = true, desc = "Surround with operator-pending motion" })
+
+	vim.keymap.set("n", keymaps.surround_line, function()
+		local style = vim.fn.input("Enter surround style (e.g., [, {, (, }, ', \", `, custom): ")
+		if style ~= nil and style ~= "" then
+			surround.surround_line(style)
+			set_repeat()
+		end
+	end, { desc = "Surround current line" })
+
+	vim.keymap.set("n", keymaps.surround_treesitter, function()
+		local style = vim.fn.input("Enter surround style (e.g., [, {, (, }, ', \", `, custom): ")
+		if style ~= nil and style ~= "" then
+			surround.surround_treesitter_node(style)
+			set_repeat()
+		end
+	end, { desc = "Surround tree-sitter node" })
+
+	vim.keymap.set("n", keymaps.surround_function, function()
+		local style = vim.fn.input("Enter surround style (e.g., [, {, (, }, ', \", `, custom): ")
+		if style ~= nil and style ~= "" then
+			surround.surround_treesitter_function(style)
+			set_repeat()
+		end
+	end, { desc = "Surround tree-sitter function node" })
+
+	vim.keymap.set("n", "<Plug>(simple-surr-repeat)", function()
+		surround.repeat_last()
+	end, { desc = "Repeat last simple-surr action" })
 end
 
 return M

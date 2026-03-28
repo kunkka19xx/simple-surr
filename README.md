@@ -10,6 +10,10 @@ But it is just fit with my needs (simple), if you find alternative to it, please
 - Supports custom styles with one or two characters.
 - Remove or change the existing surrounding style.
 - Toggle surround for selections.
+- Operator-pending surround motions (surround with any motion/text object).
+- Tree-sitter-aware surrounds for structural nodes (arguments, functions, tables, JSX).
+- Optional repeat support via `repeat.vim`.
+- Configurable spacing policy inside surrounds.
 - Fully customizable keymaps.
 
 ## DEMO
@@ -32,6 +36,10 @@ use {
                 surround_word = "<leader>sw",          -- Keymap for surrounding word
                 remove_or_change_surround_word = "<leader>sr", -- Keymap for removing/changing surrounding word
                 toggle_or_change_surround_selection = "<leader>ts", -- Keymap for removing/changing surrounding selected text
+                surround_motion = "gs",                -- Operator-pending surround
+                surround_line = "gss",                 -- Surround current line
+                surround_treesitter = "gst",           -- Surround tree-sitter node
+                surround_function = "gsf",             -- Surround tree-sitter function node
             }
         }
     end
@@ -50,6 +58,10 @@ return {
                 surround_word = "<leader>sw",          -- Keymap for surrounding word
                 remove_or_change_surround_word = "<leader>sr", -- Keymap for removing/changing surrounding word
                 toggle_or_change_surround_selection = "<leader>ts", -- Keymap for removing/changing surrounding selected text
+                surround_motion = "gs",                -- Operator-pending surround
+                surround_line = "gss",                 -- Surround current line
+                surround_treesitter = "gst",           -- Surround tree-sitter node
+                surround_function = "gsf",             -- Surround tree-sitter function node
             },
         }
     end,
@@ -65,7 +77,11 @@ require('simple-surr').setup {
     keymaps = {
         surround_selection = "<leader>s",       -- Keymap for surrounding selection
         surround_word = "<leader>sw",          -- Keymap for surrounding word
-        remove_or_change_surround_word = "<leader>sr" -- Keymap for removing/changing surrounding word
+        remove_or_change_surround_word = "<leader>sr", -- Keymap for removing/changing surrounding word
+        surround_motion = "gs",                -- Operator-pending surround
+        surround_line = "gss",                 -- Surround current line
+        surround_treesitter = "gst",           -- Surround tree-sitter node
+        surround_function = "gsf",             -- Surround tree-sitter function node
     }
 }
 ```
@@ -75,6 +91,10 @@ If no configuration is provided, the plugin will use the default keymaps:
 - `<leader>s`: Surround selected text.
 - `<leader>sw`: Surround the word under the cursor.
 - `<leader>sr`: Remove or change the surrounding style of a word.
+- `gs`: Operator-pending surround (use with a motion/text object).
+- `gss`: Surround current line.
+- `gst`: Surround tree-sitter node under cursor (arguments/table/JSX/etc.).
+- `gsf`: Surround nearest tree-sitter function node.
 
 ## Usage
 
@@ -83,14 +103,14 @@ If no configuration is provided, the plugin will use the default keymaps:
 1. Visually select the text you want to surround.
 2. Press `<leader>s` (or your configured keymap).
 3. Enter the desired surround style (e.g., `(`, `{`, `[`, `'`, `"`, `\``, or custom styles like `<>`).
-4. (Optional) Add spaces inside the surrounding characters by typing `y` when prompted.
+4. (Optional) Add spaces inside the surrounding characters by typing `y` when prompted (see spacing policy below).
 
 ### Surround Word Under Cursor
 
 1. Place the cursor on the word you want to surround.
 2. Press `<leader>sw` (or your configured keymap).
 3. Enter the desired surround style.
-4. (Optional) Add spaces inside the surrounding characters by typing `y` when prompted.
+4. (Optional) Add spaces inside the surrounding characters by typing `y` when prompted (see spacing policy below).
 
 ### Remove or Change Surround Style
 
@@ -103,6 +123,27 @@ If no configuration is provided, the plugin will use the default keymaps:
 1. Visually select the text you want to toggle or change the surround for.
 2. Press `<leader>ts` (or your configured keymap).
 3. Enter the new surround style or leave it blank to remove the existing surrounding characters.
+
+### Surround with Motion (Operator-Pending)
+
+1. Press `gs` (or your configured keymap).
+2. Enter the desired surround style.
+3. Execute any motion/text object (e.g., `iw`, `ap`, `i(`, `}`) to surround that range.
+
+### Surround Current Line
+
+1. Press `gss` (or your configured keymap).
+2. Enter the desired surround style.
+
+### Surround Tree-sitter Node
+
+1. Place the cursor inside arguments/function/table/JSX node.
+2. Press `gst` (or `gsf` for function node).
+3. Enter the desired surround style.
+
+### Repeat Last Action
+
+If you have [repeat.vim](https://github.com/tpope/vim-repeat) installed, you can use `.` to repeat the last simple-surr action.
 
 ## Customization
 
@@ -117,6 +158,11 @@ require("simple-surr").setup({
     },
     -- if you want append pairs, not overwirte, please don't set *overwrite_default_pairs* value
     overwrite_default_pairs = true,  -- Overwrite the default surround pairs
+    -- spacing policy: "prompt" (default), "always", or "never"
+    space = "prompt",
+    -- override tree-sitter node types
+    treesitter_nodes = { "arguments", "parameters", "table_constructor" },
+    treesitter_function_nodes = { "function_definition", "function" },
 })
 ```
 
