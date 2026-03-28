@@ -212,15 +212,44 @@ Examples:
 Surround a column-wise selection (like in spreadsheets):
 
 1. Enter visual block mode with `Ctrl-v`.
-2. Select the columns you want to surround.
+2. Select the columns you want to surround using any motion.
 3. Press `gsb` (or your configured keymap).
 4. Enter the surround style.
 
-Example:
+Supported visual block motions: `h`, `l`, `w`, `e`, `b`, `$`, `0`, `f{char}`, `t{char}`, `F{char}`, `T{char}`, `j`, `k`, `gg`, `G`, etc.
+
+Examples:
+
+Select columns and surround:
 ```
 a b c   ->   |a| |b| |c|
 d e f         |d| |e| |f|
 ```
+
+Select entire lines with `Ctrl-v$` and surround:
+```
+go          ->   [go]
+goose       ->   [goose]
+gotools     ->   [gotools]
+pgformatter ->   [pgformatter]
+sqlc        ->   [sqlc]
+```
+
+Select to end of each line with `$`:
+```
+foo      ->   [foo]
+bar      ->   [bar]
+bazzzz   ->   [bazzzz]
+```
+
+Select from specific column to end with `l$`:
+```
+abc          ->   [abc]
+defgh        ->   [defgh]
+ijklmnop     ->   [ijklmnop]
+```
+
+Note: Lines shorter than the selection start column are skipped.
 
 ## Customization
 
