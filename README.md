@@ -12,9 +12,15 @@ But it is just fit with my needs (simple), if you find alternative to it, please
 - Toggle surround for selections.
 - Operator-pending surround motions (surround with any motion/text object).
 - Tree-sitter-aware surrounds for structural nodes (arguments, functions, tables, JSX).
+- Multi-element surround with configurable separator (e.g., `abc, def, ghj` -> `"abc", "def", "ghj"`).
+- Smart spacing preservation in multi-surround (keeps spaces if present, no spaces for CSV-style input).
+- Prefix/suffix mode for language constructs (e.g., `if (x)`, `<!-- comment -->`).
+- Unwrap mode for quick removal of surround characters.
+- Visual block support for column-wise selections (`Ctrl-v`).
 - Optional repeat support via `repeat.vim`.
 - Configurable spacing policy inside surrounds.
 - Fully customizable keymaps.
+- Built-in help documentation (`:help simple-surr`).
 
 ## DEMO
 
@@ -40,6 +46,10 @@ use {
                 surround_line = "gss",                 -- Surround current line
                 surround_treesitter = "gst",           -- Surround tree-sitter node
                 surround_function = "gsf",             -- Surround tree-sitter function node
+                surround_multi = "gsm",               -- Multi-element surround with separator
+                surround_prefix_suffix = "gsp",        -- Prefix/suffix surround
+                unwrap = "sd",                        -- Unwrap/remove surround
+                surround_block = "gsb",                -- Visual block surround
             }
         }
     end
@@ -62,6 +72,10 @@ return {
                 surround_line = "gss",                 -- Surround current line
                 surround_treesitter = "gst",           -- Surround tree-sitter node
                 surround_function = "gsf",             -- Surround tree-sitter function node
+                surround_multi = "gsm",               -- Multi-element surround with separator
+                surround_prefix_suffix = "gsp",        -- Prefix/suffix surround
+                unwrap = "sd",                        -- Unwrap/remove surround
+                surround_block = "gsb",                -- Visual block surround
             },
         }
     end,
@@ -82,6 +96,10 @@ require('simple-surr').setup {
         surround_line = "gss",                 -- Surround current line
         surround_treesitter = "gst",           -- Surround tree-sitter node
         surround_function = "gsf",             -- Surround tree-sitter function node
+        surround_multi = "gsm",               -- Multi-element surround with separator
+        surround_prefix_suffix = "gsp",        -- Prefix/suffix surround
+        unwrap = "sd",                        -- Unwrap/remove surround
+        surround_block = "gsb",                -- Visual block surround
     }
 }
 ```
@@ -95,6 +113,10 @@ If no configuration is provided, the plugin will use the default keymaps:
 - `gss`: Surround current line.
 - `gst`: Surround tree-sitter node under cursor (arguments/table/JSX/etc.).
 - `gsf`: Surround nearest tree-sitter function node.
+- `gsm`: Surround multiple elements separated by a character.
+- `gsp`: Surround with prefix and suffix.
+- `sd`: Unwrap/remove surround characters.
+- `gsb`: Surround visual block (column selection).
 
 ## Usage
 
@@ -144,6 +166,61 @@ If no configuration is provided, the plugin will use the default keymaps:
 ### Repeat Last Action
 
 If you have [repeat.vim](https://github.com/tpope/vim-repeat) installed, you can use `.` to repeat the last simple-surr action.
+
+### Surround Multiple Elements
+
+Surround multiple elements separated by a character (e.g., comma, semicolon):
+
+1. Visually select the text containing multiple elements (e.g., `abc, def, ghj`).
+2. Press `gsm` (or your configured keymap).
+3. Enter the desired surround style (e.g., `"`).
+4. Enter the separator character (default: `,`).
+
+Examples:
+- `abc, def, ghj` with `"` and `,` -> `"abc", "def", "ghj"`
+- `foo,bar,baz` with `"` and `,` -> `"foo","bar","baz"` (no spaces, CSV-style)
+- `foo; bar; baz` with `()` and `;` -> `(foo); (bar); (baz)`
+
+### Prefix/Suffix Surround
+
+Surround with different prefix and suffix (useful for language constructs):
+
+1. Visually select the text you want to surround.
+2. Press `gsp` (or your configured keymap).
+3. Enter the prefix (e.g., `if (`).
+4. Enter the suffix (e.g., `)`).
+
+Examples:
+- `x` with prefix `if (` and suffix `)` -> `if (x)`
+- `content` with prefix `<!--` and suffix `-->` -> `<!-- content -->`
+- `x` with prefix `{{` and suffix `}}` -> `{{ x }}`
+
+### Unwrap/Remove Surround
+
+Quickly remove surround characters from text:
+
+1. Place cursor on a surrounded word (normal mode) or select surrounded text (visual mode).
+2. Press `sd` (or your configured keymap).
+3. Enter the surround style to remove (or leave empty for auto-detect).
+
+Examples:
+- `("hello")` with `sd` and empty -> `hello`
+- `["world"]` with `sd` and `[` -> `world`
+
+### Visual Block Surround
+
+Surround a column-wise selection (like in spreadsheets):
+
+1. Enter visual block mode with `Ctrl-v`.
+2. Select the columns you want to surround.
+3. Press `gsb` (or your configured keymap).
+4. Enter the surround style.
+
+Example:
+```
+a b c   ->   |a| |b| |c|
+d e f         |d| |e| |f|
+```
 
 ## Customization
 

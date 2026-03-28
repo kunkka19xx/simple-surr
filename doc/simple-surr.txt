@@ -1,0 +1,256 @@
+*simple-surr.txt*          Simple Surround Plugin for Neovim
+
+==============================================================================
+INTRODUCTION                                              *simple-surr-intro*
+
+simple-surr is a Neovim plugin that provides commands to surround text with
+various characters, brackets, quotes, and custom styles. It supports multiple
+modes of operation including visual selection, word-based, line-based,
+tree-sitter-aware, and multi-element surrounds.
+
+==============================================================================
+QUICK START                                          *simple-surr-quickstart*
+
+>
+    :set rtp+=path/to/simple-surr
+    :lua require('simple-surr').setup{}
+<
+
+==============================================================================
+COMMANDS                                              *simple-surr-commands*
+
+Basic commands are set via keymaps. See |simple-surr-keymaps| for the default
+keybindings.
+
+------------------------------------------------------------------------------
+SURROUND SELECTION                                  *simple-surr-selection*
+
+<leader>s or g:surround_selection
+        Surround the visually selected text with a character.
+
+        1. Visually select text
+        2. Press <leader>s
+        3. Enter surround style (e.g., (, {, [, ', ", `)
+
+------------------------------------------------------------------------------
+SURROUND WORD                                        *simple-surr-word*
+
+<leader>sw or g:surround_word
+        Surround the word under the cursor.
+
+        1. Place cursor on word
+        2. Press <leader>sw
+        3. Enter surround style
+
+------------------------------------------------------------------------------
+REMOVE/CHANGE SURROUND                            *simple-surr-remove-change*
+
+<leader>sr or g:remove_or_change_surround_word
+        Remove or change the surrounding characters of a word.
+
+        1. Place cursor on surrounded word
+        2. Press <leader>sr
+        3. Enter new style or leave empty to remove
+
+------------------------------------------------------------------------------
+TOGGLE SURROUND                                    *simple-surr-toggle*
+
+<leader>ts or g:toggle_or_change_surround_selection
+        Toggle or change surround for visually selected text.
+
+        1. Visually select surrounded text
+        2. Press <leader>ts
+        3. Enter new style or leave empty to remove
+
+==============================================================================
+OPERATOR PENDING                                    *simple-surr-operator*
+
+gs or g:surround_motion
+        Operator-pending surround. After entering a style, execute any motion
+        or text object to surround that range.
+
+        Examples:
+        gs"iw     - Surround word with quotes
+        gs"ap     - Surround paragraph with quotes
+        gs(ci(    - Surround inside parentheses
+
+gss or g:surround_line
+        Surround the current line (preserves leading/trailing whitespace).
+
+        1. Press gss
+        2. Enter surround style
+
+==============================================================================
+TREE-SITTER SUPPORT                              *simple-surr-treesitter*
+
+gst or g:surround_treesitter
+        Surround the current tree-sitter node under the cursor.
+
+        Supported node types: arguments, parameters, table, JSX elements, etc.
+
+gsf or g:surround_function
+        Surround the nearest function definition.
+
+==============================================================================
+MULTI-ELEMENT SURROUND                            *simple-surr-multi*
+
+gsm or g:surround_multi
+        Surround multiple elements separated by a character.
+
+        1. Visually select text with elements (e.g., "a, b, c")
+        2. Press gsm
+        3. Enter surround style
+        4. Enter separator character (default: ,)
+
+        Examples:
+        abc, def, ghj with " and ,  ->  "abc", "def", "ghj"
+        foo,bar,baz with " and ,    ->  "foo","bar","baz"
+
+==============================================================================
+PREFIX/SUFFIX SURROUND                          *simple-surr-prefix-suffix*
+
+gsp or g:surround_prefix_suffix
+        Surround with different prefix and suffix.
+
+        1. Visually select text
+        2. Press gsp
+        3. Enter prefix (e.g., "if (")
+        4. Enter suffix (e.g., ")")
+
+        Examples:
+        x with "if (" and ")"    ->  if (x)
+        content with "<!-- " and " -->"  ->  <!-- content -->
+
+==============================================================================
+UNWRAP                                                *simple-surr-unwrap*
+
+sd or g:unwrap
+        Remove/unwrap surrounding characters from word or selection.
+
+        1. Place cursor on surrounded word or select text
+        2. Press sd
+        3. Enter style to remove (or empty for auto-detect)
+
+        Examples:
+        "hello" with sd (empty)  ->  hello
+        [world] with sd and [   ->  world
+
+==============================================================================
+VISUAL BLOCK SURROUND                            *simple-surr-block*
+
+gsb or g:surround_block
+        Surround a visual block selection (column mode with Ctrl-v).
+
+        1. Enter visual block mode with Ctrl-v
+        2. Select columns
+        3. Press gsb
+        4. Enter surround style
+
+==============================================================================
+REPEAT SUPPORT                                      *simple-surr-repeat*
+
+If repeat.vim (https://github.com/tpope/vim-repeat) is installed, you can use
+the `.` command to repeat the last simple-surr action.
+
+==============================================================================
+CONFIGURATION                                      *simple-surr-configuration*
+
+>
+    require('simple-surr').setup({
+        keymaps = {
+            surround_selection = "<leader>s",
+            surround_word = "<leader>sw",
+            remove_or_change_surround_word = "<leader>sr",
+            toggle_or_change_surround_selection = "<leader>ts",
+            surround_motion = "gs",
+            surround_line = "gss",
+            surround_treesitter = "gst",
+            surround_function = "gsf",
+            surround_multi = "gsm",
+            surround_prefix_suffix = "gsp",
+            unwrap = "sd",
+            surround_block = "gsb",
+        },
+        custom_surround_pairs = {
+            ["b"] = {"{", "}"},  -- Custom pair
+        },
+        overwrite_default_pairs = false,
+        space = "prompt",  -- "prompt", "always", or "never"
+        treesitter_nodes = {"arguments", "parameters"},
+        treesitter_function_nodes = {"function_definition"},
+    })
+<
+
+------------------------------------------------------------------------------
+OPTIONS                                                *simple-surr-options*
+
+space                                            *simple-surr-option-space*
+        Controls spacing inside surround characters.
+        Values: "prompt" (ask user), "always" (always add space), "never"
+
+custom_surround_pairs                    *simple-surr-option-custom_pairs*
+        Table of custom surround pairs.
+        Format: {["key"] = {"opening", "closing"}}
+
+overwrite_default_pairs          *simple-surr-option-overwrite_pairs*
+        When true, replaces default pairs with custom ones.
+
+treesitter_nodes                      *simple-surr-option-ts-nodes*
+        List of tree-sitter node types to match for surround_treesitter.
+
+treesitter_function_nodes      *simple-surr-option-ts-func-nodes*
+        List of tree-sitter node types for function matching.
+
+==============================================================================
+DEFAULT KEYMAPS                                    *simple-surr-keymaps*
+
+Normal mode:
+<leader>s           Surround selection (visual mode required)
+<leader>sw         Surround word under cursor
+<leader>sr         Remove or change surround of word
+gs                 Operator-pending surround
+gss                Surround current line
+gst                Surround tree-sitter node
+gsf                Surround function
+gsm                Multi-element surround
+gsp                Prefix/suffix surround
+sd                 Unwrap/remove surround
+<leader>ts         Toggle/change surround (visual mode required)
+gsb                Visual block surround
+
+==============================================================================
+DEFAULT SURROUND PAIRS                        *simple-surr-default-pairs*
+
+(  )    Round brackets
+{  }    Curly braces
+[  ]    Square brackets
+'  '    Single quotes
+"  "    Double quotes
+`  `    Backticks
+<  >    Angle brackets
+|  |    Pipe
+
+==============================================================================
+CUSTOMIZATION                                    *simple-surr-customization*
+
+Adding custom pairs:
+>
+    require('simple-surr').setup({
+        custom_surround_pairs = {
+            ["!"] = {"!", "!"},  -- Double exclamation
+            ["w"] = {"{{", "}}"}, -- Double curly
+        }
+    })
+<
+
+Using table format for pairs:
+>
+    require('simple-surr').setup({
+        custom_surround_pairs = {
+            ["b"] = {"{", "}"},  -- Braces (like vim-surround)
+        }
+    })
+<
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
